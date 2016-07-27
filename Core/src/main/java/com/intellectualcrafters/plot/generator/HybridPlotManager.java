@@ -31,10 +31,10 @@ public class HybridPlotManager extends ClassicPlotManager {
     public void exportTemplate(PlotArea plotArea) throws IOException {
         HashSet<FileBytes> files = new HashSet<>(
                 Collections.singletonList(new FileBytes(Settings.Paths.TEMPLATES + "/tmp-data.yml", Template.getBytes(plotArea))));
-        String dir = "schematics" + File.separator + "GEN_ROAD_SCHEMATIC" + File.separator + plotArea.worldname + File.separator;
-        String newDir = "schematics" + File.separator + "GEN_ROAD_SCHEMATIC" + File.separator + "__TEMP_DIR__" + File.separator;
         try {
+            String dir = "schematics" + File.separator + "GEN_ROAD_SCHEMATIC" + File.separator + plotArea.worldname + File.separator;
             File sideroad = MainUtil.getFile(PS.get().IMP.getDirectory(), dir + "sideroad.schematic");
+            String newDir = "schematics" + File.separator + "GEN_ROAD_SCHEMATIC" + File.separator + "__TEMP_DIR__" + File.separator;
             if (sideroad.exists()) {
                 files.add(new FileBytes(newDir + "sideroad.schematic", Files.readAllBytes(sideroad.toPath())));
             }
@@ -143,7 +143,6 @@ public class HybridPlotManager extends ClassicPlotManager {
      */
     @Override
     public boolean clearPlot(PlotArea plotArea, Plot plot, final Runnable whenDone) {
-        final String world = plotArea.worldname;
         final HybridPlotWorld dpw = (HybridPlotWorld) plotArea;
         Location pos1 = plot.getBottomAbs();
         Location pos2 = plot.getExtendedTopAbs();
@@ -161,6 +160,7 @@ public class HybridPlotManager extends ClassicPlotManager {
         final PlotBlock air = PlotBlock.get((short) 0, (byte) 0);
         final String biome = dpw.PLOT_BIOME;
         final LocalBlockQueue queue = plotArea.getQueue(false);
+        final String world = plotArea.worldname;
         ChunkManager.chunkTask(pos1, pos2, new RunnableVal<int[]>() {
             @Override
             public void run(int[] value) {
@@ -191,13 +191,10 @@ public class HybridPlotManager extends ClassicPlotManager {
                 // And finally set the schematic, the y value is unimportant for this function
                 pastePlotSchematic(dpw, bot, top);
             }
-        }, new Runnable() {
-            @Override
-            public void run() {
-                queue.enqueue();
-                // And notify whatever called this when plot clearing is done
-                GlobalBlockQueue.IMP.addTask(whenDone);
-            }
+        }, () -> {
+            queue.enqueue();
+            // And notify whatever called this when plot clearing is done
+            GlobalBlockQueue.IMP.addTask(whenDone);
         }, 10);
         return true;
     }

@@ -236,29 +236,21 @@ public class PS {
             }
             // Economy
             if (Settings.Enabled_Components.ECONOMY) {
-                TaskManager.runTask(new Runnable() {
-                    @Override
-                    public void run() {
-                        EconHandler.manager = PS.this.IMP.getEconomyHandler();
-                    }
-                });
+                TaskManager.runTask(() -> EconHandler.manager = PS.this.IMP.getEconomyHandler());
             }
 
             // Check for updates
             if (Settings.Enabled_Components.UPDATER) {
-                TaskManager.runTaskAsync(new Runnable() {
-                    @Override
-                    public void run() {
-                        URL url = Updater.getUpdate();
-                        if (url != null) {
-                            PS.this.update = url;
-                        } else if (PS.this.lastVersion == null) {
-                            PS.log("&aThanks for installing PlotSquared!");
-                        } else if (!get().checkVersion(PS.this.lastVersion, PS.this.version)) {
-                            PS.log("&aThanks for updating from " + StringMan.join(PS.this.lastVersion, ".") + " to " + StringMan
-                                    .join(PS.this.version, ".") + "!");
-                            DBFunc.updateTables(PS.this.lastVersion);
-                        }
+                TaskManager.runTaskAsync(() -> {
+                    URL url = Updater.getUpdate();
+                    if (url != null) {
+                        PS.this.update = url;
+                    } else if (PS.this.lastVersion == null) {
+                        PS.log("&aThanks for installing PlotSquared!");
+                    } else if (!get().checkVersion(PS.this.lastVersion, PS.this.version)) {
+                        PS.log("&aThanks for updating from " + StringMan.join(PS.this.lastVersion, ".") + " to " + StringMan
+                                .join(PS.this.version, ".") + "!");
+                        DBFunc.updateTables(PS.this.lastVersion);
                     }
                 });
             }
@@ -274,21 +266,18 @@ public class PS {
                         this.IMP.setGenerator(world);
                     }
                 }
-                TaskManager.runTaskLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        for (String world : section.getKeys(false)) {
-                            if (world.equals("CheckingPlotSquaredGenerator")) {
-                                continue;
-                            }
-                            if (!WorldUtil.IMP.isWorld(world)) {
-                                debug("&c`" + world + "` was not properly loaded - PlotSquared will now try to load it properly: ");
-                                debug(
-                                        "&8 - &7Are you trying to delete this world? Remember to remove it from the settings.yml, bukkit.yml and "
-                                                + "multiverse worlds.yml");
-                                debug("&8 - &7Your world management plugin may be faulty (or non existent)");
-                                PS.this.IMP.setGenerator(world);
-                            }
+                TaskManager.runTaskLater(() -> {
+                    for (String world : section.getKeys(false)) {
+                        if (world.equals("CheckingPlotSquaredGenerator")) {
+                            continue;
+                        }
+                        if (!WorldUtil.IMP.isWorld(world)) {
+                            debug("&c`" + world + "` was not properly loaded - PlotSquared will now try to load it properly: ");
+                            debug(
+                                    "&8 - &7Are you trying to delete this world? Remember to remove it from the settings.yml, bukkit.yml and "
+                                            + "multiverse worlds.yml");
+                            debug("&8 - &7Your world management plugin may be faulty (or non existent)");
+                            PS.this.IMP.setGenerator(world);
                         }
                     }
                 }, 1);
@@ -362,26 +351,20 @@ public class PS {
     }
 
     private void startUuidCatching() {
-        TaskManager.runTaskLater(new Runnable() {
-            @Override
-            public void run() {
-                debug("Starting UUID caching");
-                UUIDHandler.startCaching(new Runnable() {
-                    @Override
-                    public void run() {
-                        UUIDHandler.add(new StringWrapper("*"), DBFunc.everyone);
-                        for (Plot plot : getPlots()) {
-                            if (plot.hasOwner() && plot.temp != -1) {
-                                if (UUIDHandler.getName(plot.owner) == null) {
-                                    UUIDHandler.implementation.unknown.add(plot.owner);
-                                }
-                            }
+        TaskManager.runTaskLater(() -> {
+            debug("Starting UUID caching");
+            UUIDHandler.startCaching(() -> {
+                UUIDHandler.add(new StringWrapper("*"), DBFunc.everyone);
+                for (Plot plot : getPlots()) {
+                    if (plot.hasOwner() && plot.temp != -1) {
+                        if (UUIDHandler.getName(plot.owner) == null) {
+                            UUIDHandler.implementation.unknown.add(plot.owner);
                         }
-                        startExpiryTasks();
-                        startPlotMeConversion();
                     }
-                });
-            }
+                }
+                startExpiryTasks();
+                startPlotMeConversion();
+            });
         }, 20);
     }
 
@@ -398,17 +381,14 @@ public class PS {
 
     private void startPlotMeConversion() {
         if (Settings.Enabled_Components.PLOTME_CONVERTER || Settings.PlotMe.CACHE_UUDS) {
-            TaskManager.runTaskLater(new Runnable() {
-                @Override
-                public void run() {
-                    if (PS.this.IMP.initPlotMeConverter()) {
-                        PS.log("&c=== IMPORTANT ===");
-                        PS.log("&cTHIS MESSAGE MAY BE EXTREMELY HELPFUL IF YOU HAVE TROUBLE CONVERTING PlotMe!");
-                        PS.log("&c - Make sure 'UUID.read-from-disk' is disabled (false)!");
-                        PS.log("&c - Sometimes the database can be locked, deleting PlotMe.jar beforehand will fix the issue!");
-                        PS.log("&c - After the conversion is finished, please set 'plotme-convert.enabled' to false in the "
-                                + "'settings.yml'");
-                    }
+            TaskManager.runTaskLater(() -> {
+                if (PS.this.IMP.initPlotMeConverter()) {
+                    PS.log("&c=== IMPORTANT ===");
+                    PS.log("&cTHIS MESSAGE MAY BE EXTREMELY HELPFUL IF YOU HAVE TROUBLE CONVERTING PlotMe!");
+                    PS.log("&c - Make sure 'UUID.read-from-disk' is disabled (false)!");
+                    PS.log("&c - Sometimes the database can be locked, deleting PlotMe.jar beforehand will fix the issue!");
+                    PS.log("&c - After the conversion is finished, please set 'plotme-convert.enabled' to false in the "
+                            + "'settings.yml'");
                 }
             }, 20);
         }
@@ -649,7 +629,7 @@ public class PS {
 
     public Set<PlotArea> getPlotAreas(String world, RegionWrapper region) {
         QuadMap<PlotArea> areas = this.plotAreaGrid.get(world);
-        return areas != null ? areas.get(region) : new HashSet<PlotArea>();
+        return areas != null ? areas.get(region) : new HashSet<>();
     }
 
     public PlotManager getPlotManager(Plot plot) {
@@ -749,9 +729,7 @@ public class PS {
     }
 
     public void removePlotAreas(String world) {
-        for (PlotArea area : getPlotAreas(world)) {
-            removePlotArea(area);
-        }
+        getPlotAreas(world).forEach(this::removePlotArea);
     }
 
     private void setPlotsTmp(PlotArea area) {
@@ -830,12 +808,7 @@ public class PS {
                 result.add(plot);
             }
         }
-        Collections.sort(overflow, new Comparator<Plot>() {
-            @Override
-            public int compare(Plot a, Plot b) {
-                return a.hashCode() - b.hashCode();
-            }
-        });
+        Collections.sort(overflow, (a, b) -> a.hashCode() - b.hashCode());
         result.addAll(overflow);
         return result;
     }
@@ -890,9 +863,7 @@ public class PS {
             }
         }
         Collections.addAll(result, overflowArray);
-        for (Plot plot : extra) {
-            result.add(plot);
-        }
+        result.addAll(extra);
         return result;
     }
 
@@ -970,9 +941,7 @@ public class PS {
             }
         }
         Collections.addAll(result, overflowArray);
-        for (Plot plot : extra) {
-            result.add(plot);
-        }
+        result.addAll(extra);
         return result;
     }
 
@@ -1019,7 +988,7 @@ public class PS {
             }
         } else {
             for (PlotArea area : this.plotAreas) {
-                map.put(area, new ArrayList<Plot>(0));
+                map.put(area, new ArrayList<>(0));
             }
             Collection<Plot> lastList = null;
             PlotArea lastWorld = null;
@@ -1034,14 +1003,11 @@ public class PS {
             }
         }
         List<PlotArea> areas = Arrays.asList(this.plotAreas);
-        Collections.sort(areas, new Comparator<PlotArea>() {
-            @Override
-            public int compare(PlotArea a, PlotArea b) {
-                if (priorityArea != null && StringMan.isEqual(a.toString(), b.toString())) {
-                    return -1;
-                }
-                return a.hashCode() - b.hashCode();
+        Collections.sort(areas, (a, b) -> {
+            if (priorityArea != null && StringMan.isEqual(a.toString(), b.toString())) {
+                return -1;
             }
+            return a.hashCode() - b.hashCode();
         });
         ArrayList<Plot> toReturn = new ArrayList<>(plots.size());
         for (PlotArea area : areas) {
@@ -1278,7 +1244,7 @@ public class PS {
     }
 
     public Collection<Plot> getPlots(PlotArea area) {
-        return area == null ? new HashSet<Plot>() : area.getPlots();
+        return area == null ? new HashSet<>() : area.getPlots();
     }
 
     public Plot getPlot(PlotArea area, PlotId id) {
@@ -1460,7 +1426,7 @@ public class PS {
                 PS.log(C.PREFIX + "&aDetected world load for '" + world + "'");
                 String gen_string = worldSection.getString("generator.plugin", "PlotSquared");
                 if (type == 2) {
-                    Set<PlotCluster> clusters = this.clusters_tmp != null ? this.clusters_tmp.get(world) : new HashSet<PlotCluster>();
+                    Set<PlotCluster> clusters = this.clusters_tmp != null ? this.clusters_tmp.get(world) : new HashSet<>();
                     if (clusters == null) {
                         throw new IllegalArgumentException("No cluster exists for world: " + world);
                     }
@@ -1494,9 +1460,7 @@ public class PS {
                         areaGen.augment(pa);
                         toLoad.add(pa);
                     }
-                    for (PlotArea area : toLoad) {
-                        addPlotArea(area);
-                    }
+                    toLoad.forEach(this::addPlotArea);
                     return;
                 }
                 GeneratorWrapper<?> areaGen = this.IMP.getGenerator(world, gen_string);
@@ -2075,11 +2039,7 @@ public class PS {
      */
     @Deprecated
     public Set<String> getPlotWorldStrings() {
-        HashSet<String> set = new HashSet<>(this.plotAreaMap.size());
-        for (String entry : this.plotAreaMap.keySet()) {
-            set.add(entry);
-        }
-        return set;
+        return this.plotAreaMap.keySet();
     }
 
     public boolean isAugmented(String world) {

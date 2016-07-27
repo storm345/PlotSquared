@@ -30,6 +30,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * @author Jesse Boyd
@@ -477,15 +478,7 @@ public abstract class PlotArea {
     }
     
     public Set<Plot> getPlots(UUID uuid) {
-        HashSet<Plot> myplots = new HashSet<>();
-        for (Plot plot : getPlots()) {
-            if (plot.isBasePlot()) {
-                if (plot.isOwner(uuid)) {
-                    myplots.add(plot);
-                }
-            }
-        }
-        return myplots;
+        return getPlots().stream().filter(Plot::isBasePlot).filter(plot -> plot.isOwner(uuid)).collect(Collectors.toSet());
     }
     
     public Set<Plot> getPlots(PlotPlayer player) {
@@ -719,9 +712,7 @@ public abstract class PlotArea {
         if (meta == null) {
             setMeta("worldBorder", 1);
         }
-        for (Plot plot : getPlots()) {
-            plot.updateWorldBorder();
-        }
+        getPlots().forEach(Plot::updateWorldBorder);
     }
 
     /**

@@ -35,9 +35,7 @@ public class PlainChatManager extends ChatManager<List<StringBuilder>> {
     @Override
     public void send(PlotMessage plotMessage, PlotPlayer player) {
         StringBuilder built = new StringBuilder();
-        for (StringBuilder sb : plotMessage.$(this)) {
-            built.append(sb);
-        }
+        plotMessage.$(this).forEach(built::append);
         player.sendMessage(built.toString());
     }
 

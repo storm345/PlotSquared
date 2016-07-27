@@ -172,9 +172,7 @@ public class PlotSettings {
     }
 
     public void removeComments(List<PlotComment> comments) {
-        for (PlotComment comment : comments) {
-            removeComment(comment);
-        }
+        comments.forEach(this::removeComment);
     }
 
     public void addComment(PlotComment comment) {

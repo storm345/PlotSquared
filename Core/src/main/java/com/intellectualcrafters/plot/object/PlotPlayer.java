@@ -15,12 +15,12 @@ import com.intellectualcrafters.plot.util.expiry.ExpireManager;
 import com.plotsquared.general.commands.CommandCaller;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * The abstract class supporting {@code BukkitPlayer} and {@code SpongePlayer}.
@@ -415,14 +415,7 @@ public abstract class PlotPlayer implements CommandCaller, OfflinePlotPlayer {
      * @return a {@code Set} of plots this player owns in the provided world
      */
     public Set<Plot> getPlots(String world) {
-        UUID uuid = getUUID();
-        HashSet<Plot> plots = new HashSet<>();
-        for (Plot plot : PS.get().getPlots(world)) {
-            if (plot.isOwner(uuid)) {
-                plots.add(plot);
-            }
-        }
-        return plots;
+        return PS.get().getPlots(world).stream().filter(plot -> plot.isOwner(getUUID())).collect(Collectors.toSet());
     }
 
     public void populatePersistentMetaMap() {

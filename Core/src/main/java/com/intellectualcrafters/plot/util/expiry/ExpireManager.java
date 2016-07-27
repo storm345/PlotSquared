@@ -82,24 +82,21 @@ public class ExpireManager {
                 Iterator<Plot> iter = plotsToDelete.iterator();
                 final Plot current = iter.next();
                 if (!isExpired(new ArrayDeque<>(tasks), current).isEmpty()) {
-                    TaskManager.runTask(new Runnable() {
-                        @Override
-                        public void run() {
-                            pp.setMeta("ignoreExpireTask", true);
-                            pp.teleport(current.getCenter());
-                            pp.deleteMeta("ignoreExpireTask");
-                            PlotMessage msg = new PlotMessage()
-                                    .text(num + " " + (num > 1 ? "plots are" : "plot is") + " expired: ").color("$1").text(current.toString()).color("$2").suggest("/plot list expired")
-                                    .tooltip("/plot list expired")
-                                    //.text("\n - ").color("$3").text("Delete all (/plot delete expired)").color("$2").command("/plot delete expired")
-                                    .text("\n - ").color("$3").text("Delete this (/plot delete)").color("$2").suggest("/plot delete")
-                                    .tooltip("/plot delete")
-                                    .text("\n - ").color("$3").text("Remind later (/plot set keep 1d)").color("$2").suggest("/plot set keep 1d")
-                                    .tooltip("/plot set keep 1d")
-                                    .text("\n - ").color("$3").text("Keep this (/plot set keep true)").color("$2").suggest("/plot set keep true")
-                                    .tooltip("/plot set keep true");
-                            msg.send(pp);
-                        }
+                    TaskManager.runTask(() -> {
+                        pp.setMeta("ignoreExpireTask", true);
+                        pp.teleport(current.getCenter());
+                        pp.deleteMeta("ignoreExpireTask");
+                        PlotMessage msg = new PlotMessage()
+                                .text(num + " " + (num > 1 ? "plots are" : "plot is") + " expired: ").color("$1").text(current.toString()).color("$2").suggest("/plot list expired")
+                                .tooltip("/plot list expired")
+                                //.text("\n - ").color("$3").text("Delete all (/plot delete expired)").color("$2").command("/plot delete expired")
+                                .text("\n - ").color("$3").text("Delete this (/plot delete)").color("$2").suggest("/plot delete")
+                                .tooltip("/plot delete")
+                                .text("\n - ").color("$3").text("Remind later (/plot set keep 1d)").color("$2").suggest("/plot set keep 1d")
+                                .tooltip("/plot set keep 1d")
+                                .text("\n - ").color("$3").text("Keep this (/plot set keep true)").color("$2").suggest("/plot set keep true")
+                                .tooltip("/plot set keep true");
+                        msg.send(pp);
                     });
                     return;
                 } else {
@@ -254,21 +251,13 @@ public class ExpireManager {
                                 public void run(Boolean confirmation) {
                                     expiredTask.run(plot, task, confirmation);
                                 }
-                            }, new Runnable() {
-                                @Override
-                                public void run() {
-                                    FlagManager.addPlotFlag(plot, Flags.ANALYSIS, changed.asList());
-                                    TaskManager.runTaskLaterAsync(task, 20);
-                                }
+                            }, () -> {
+                                FlagManager.addPlotFlag(plot, Flags.ANALYSIS, changed.asList());
+                                TaskManager.runTaskLaterAsync(task, 20);
                             });
                         }
                     };
-                    final Runnable doAnalysis = new Runnable() {
-                        @Override
-                        public void run() {
-                            HybridUtils.manager.analyzePlot(plot, handleAnalysis);
-                        }
-                    };
+                    final Runnable doAnalysis = () -> HybridUtils.manager.analyzePlot(plot, handleAnalysis);
 
                     PlotAnalysis analysis = plot.getComplexity(null);
                     if (analysis != null) {
@@ -277,12 +266,7 @@ public class ExpireManager {
                             public void run(Boolean value) {
                                 doAnalysis.run();
                             }
-                        }, new Runnable() {
-                            @Override
-                            public void run() {
-                                task.run();
-                            }
-                        });
+                        }, task);
                     } else {
                         doAnalysis.run();
                     }
@@ -290,13 +274,10 @@ public class ExpireManager {
                 }
                 if (plots.isEmpty()) {
                     ExpireManager.this.running = 3;
-                    TaskManager.runTaskLater(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (ExpireManager.this.running == 3) {
-                                ExpireManager.this.running = 2;
-                                runTask(expiredTask);
-                            }
+                    TaskManager.runTaskLater(() -> {
+                        if (ExpireManager.this.running == 3) {
+                            ExpireManager.this.running = 2;
+                            runTask(expiredTask);
                         }
                     }, 86400000);
                 } else {
@@ -312,7 +293,7 @@ public class ExpireManager {
     }
 
     public HashSet<Plot> getPendingExpired() {
-        return plotsToDelete == null ? new HashSet<Plot>() : plotsToDelete;
+        return plotsToDelete == null ? new HashSet<>() : plotsToDelete;
     }
 
     public void deleteWithMessage(Plot plot, Runnable whenDone) {

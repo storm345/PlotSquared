@@ -95,9 +95,7 @@ public class PlotAnalysis {
                 if (plots.size() < 3) {
                     PS.debug("Calibration cancelled due to insufficient comparison data, please try again later");
                     running = false;
-                    for (Plot plot : plots) {
-                        plot.removeRunning();
-                    }
+                    plots.forEach(Plot::removeRunning);
                     return;
                 }
 
@@ -119,15 +117,12 @@ public class PlotAnalysis {
 
                 final AtomicInteger mi = new AtomicInteger(0);
 
-                Thread ratingAnalysis = new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        for (; mi.intValue() < plots.size(); mi.incrementAndGet()) {
-                            int i = mi.intValue();
-                            Plot plot = plots.get(i);
-                            ratings[i] = (int) ((plot.getAverageRating() + plot.getSettings().getRatings().size()) * 100);
-                            PS.debug(" | " + plot + " (rating) " + ratings[i]);
-                        }
+                Thread ratingAnalysis = new Thread(() -> {
+                    for (; mi.intValue() < plots.size(); mi.incrementAndGet()) {
+                        int i = mi.intValue();
+                        Plot plot = plots.get(i);
+                        ratings[i] = (int) ((plot.getAverageRating() + plot.getSettings().getRatings().size()) * 100);
+                        PS.debug(" | " + plot + " (rating) " + ratings[i]);
                     }
                 });
                 ratingAnalysis.start();
@@ -322,9 +317,7 @@ public class PlotAnalysis {
                     if (optimalComplexity == Integer.MAX_VALUE) {
                         PS.debug("Insufficient data to determine correlation! " + optimalIndex + " | " + n);
                         running = false;
-                        for (Plot plot : plots) {
-                            plot.removeRunning();
-                        }
+                        plots.forEach(Plot::removeRunning);
                         return;
                     }
                 } else { // Use the fast radix sort algorithm
@@ -343,9 +336,7 @@ public class PlotAnalysis {
                 Settings.save(PS.get().worldsFile);
                 PS.debug("$1Done!");
                 running = false;
-                for (Plot plot : plots) {
-                    plot.removeRunning();
-                }
+                plots.forEach(Plot::removeRunning);
                 whenDone.run();
             }
         });
