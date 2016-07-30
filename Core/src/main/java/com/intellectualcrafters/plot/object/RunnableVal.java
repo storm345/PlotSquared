@@ -1,6 +1,9 @@
 package com.intellectualcrafters.plot.object;
 
-public abstract class RunnableVal<T> implements Runnable {
+import java.util.function.Consumer;
+
+public abstract class RunnableVal<T> implements Runnable, Consumer<T> {
+
     public T value;
     
     public RunnableVal() {}
@@ -15,4 +18,10 @@ public abstract class RunnableVal<T> implements Runnable {
     }
     
     public abstract void run(T value);
+
+    @Override
+    public final void accept(T t) {
+        this.value = t;
+        this.run();
+    }
 }

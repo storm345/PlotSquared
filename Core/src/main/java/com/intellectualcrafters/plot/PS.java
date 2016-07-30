@@ -17,112 +17,79 @@ import com.intellectualcrafters.plot.generator.HybridUtils;
 import com.intellectualcrafters.plot.generator.IndependentPlotGenerator;
 import com.intellectualcrafters.plot.logger.DelegateLogger;
 import com.intellectualcrafters.plot.logger.ILogger;
-import com.intellectualcrafters.plot.object.Location;
-import com.intellectualcrafters.plot.object.Plot;
-import com.intellectualcrafters.plot.object.PlotArea;
-import com.intellectualcrafters.plot.object.PlotCluster;
-import com.intellectualcrafters.plot.object.PlotFilter;
-import com.intellectualcrafters.plot.object.PlotId;
-import com.intellectualcrafters.plot.object.PlotManager;
-import com.intellectualcrafters.plot.object.PlotPlayer;
-import com.intellectualcrafters.plot.object.RegionWrapper;
-import com.intellectualcrafters.plot.object.RunnableVal;
-import com.intellectualcrafters.plot.object.StringWrapper;
-import com.intellectualcrafters.plot.util.AbstractTitle;
-import com.intellectualcrafters.plot.util.ChatManager;
-import com.intellectualcrafters.plot.util.ChunkManager;
-import com.intellectualcrafters.plot.util.CommentManager;
-import com.intellectualcrafters.plot.util.EconHandler;
-import com.intellectualcrafters.plot.util.EventUtil;
-import com.intellectualcrafters.plot.util.InventoryUtil;
-import com.intellectualcrafters.plot.util.MainUtil;
-import com.intellectualcrafters.plot.util.MathMan;
-import com.intellectualcrafters.plot.util.ReflectionUtils;
-import com.intellectualcrafters.plot.util.SchematicHandler;
-import com.intellectualcrafters.plot.util.SetupUtils;
-import com.intellectualcrafters.plot.util.StringMan;
-import com.intellectualcrafters.plot.util.TaskManager;
-import com.intellectualcrafters.plot.util.UUIDHandler;
-import com.intellectualcrafters.plot.util.WorldUtil;
+import com.intellectualcrafters.plot.object.*;
+import com.intellectualcrafters.plot.util.*;
 import com.intellectualcrafters.plot.util.area.QuadMap;
 import com.intellectualcrafters.plot.util.block.GlobalBlockQueue;
 import com.intellectualcrafters.plot.util.expiry.ExpireManager;
 import com.intellectualcrafters.plot.util.expiry.ExpiryTask;
 import com.plotsquared.listener.WESubscriber;
 import com.sk89q.worldedit.WorldEdit;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+
+import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Files;
 import java.sql.SQLException;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 /**
  * An implementation of the core, with a static getter for easy access.
  */
+@SuppressWarnings("unused")
 public class PS {
+
     private static PS instance;
-    // Implementation
+
+    /**
+     * Implementation
+     */
     public final IPlotMain IMP;
-    // Implementation logger
-    private ILogger logger;
-    // Current thread
-    private final Thread thread;
-    // Platform / Version / Update URL
-    private final String platform;
-    private final int[] version;
-    private int[] lastVersion;
+
     public URL update;
-    // WorldEdit instance
     public WorldEdit worldedit;
-    // Files and configuration
-    private File jarFile = null; // This file
     public File styleFile;
     public File configFile;
     public File worldsFile;
     public File commandsFile;
     public File translationFile;
-    private File storageFile;
+    public File storageFile;
     public YamlConfiguration style;
     public YamlConfiguration config;
     public YamlConfiguration worlds;
     public YamlConfiguration storage;
     public YamlConfiguration commands;
-     // Temporary hold the plots/clusters before the worlds load
+
+    // Temporary hold the plots/clusters before the worlds load
     public HashMap<String, Set<PlotCluster>> clusters_tmp;
     public HashMap<String, HashMap<PlotId, Plot>> plots_tmp;
-    // All plot areas
-    private PlotArea[] plotAreas = new PlotArea[0];
+
+    // Current Thread
+    private final Thread thread;
+    private final String platform;
+    private final int[] version;
     // All plot areas mapped by world
     private final HashMap<String, PlotArea[]> plotAreaMap = new HashMap<>();
     // All plot areas mapped by position
     private final HashMap<String, QuadMap<PlotArea>> plotAreaGrid = new HashMap<>();
     // Optimization if there are no hash collisions
-    private boolean plotAreaHasCollision = false;
     private final HashSet<Integer> plotAreaHashCheck = new HashSet<>();
+
+    // Implementation Logger
+    private ILogger logger;
+    private int[] lastVersion;
+    // Files and configuration
+    private File jarFile = null; // This file
+    // All plot areas
+    private PlotArea[] plotAreas = new PlotArea[0];
+    private boolean plotAreaHasCollision = false;
 
     /**
      * Initialize PlotSquared with the desired Implementation class.
@@ -234,6 +201,7 @@ public class PS {
                     PS.debug("Incompatible version of WorldEdit, please upgrade: http://builds.enginehub.org/job/worldedit?branch=master");
                 }
             }
+
             // Economy
             if (Settings.Enabled_Components.ECONOMY) {
                 TaskManager.runTask(() -> EconHandler.manager = PS.this.IMP.getEconomyHandler());
@@ -355,13 +323,11 @@ public class PS {
             debug("Starting UUID caching");
             UUIDHandler.startCaching(() -> {
                 UUIDHandler.add(new StringWrapper("*"), DBFunc.everyone);
-                for (Plot plot : getPlots()) {
-                    if (plot.hasOwner() && plot.temp != -1) {
-                        if (UUIDHandler.getName(plot.owner) == null) {
-                            UUIDHandler.implementation.unknown.add(plot.owner);
-                        }
-                    }
-                }
+
+                getPlots().stream().filter(plot -> plot.hasOwner() && plot.temp != -1
+                        && UUIDHandler.getName(plot.owner) == null)
+                        .forEach(plot -> UUIDHandler.implementation.unknown.add(plot.owner));
+
                 startExpiryTasks();
                 startPlotMeConversion();
             });
@@ -435,6 +401,51 @@ public class PS {
         return this.platform;
     }
 
+    public Optional<PlotArea> findApplicablePlotARea(Location location) {
+        switch (this.plotAreas.length) {
+            case 0:
+                return Optional.empty();
+            case 1:
+                return Optional.of(this.plotAreas[0]);
+            case 2:
+            case 3:
+            case 4:
+            case 5:
+            case 6:
+            case 7:
+            case 8: {
+                String world = location.getWorld();
+                return Common.findFirst(this.plotAreas, area -> world.hashCode() == area.worldhash &&
+                        area.contains(location.getX(), location.getZ()) && (!this.plotAreaHasCollision || world.equals(area.worldname)));
+            }
+            default: {
+                PlotArea[] areas = this.plotAreaMap.get(location.getWorld());
+                if (areas == null) {
+                    return Optional.empty();
+                }
+                int y;
+                int x;
+                switch (areas.length) {
+                    case 1:
+                        return Optional.of(areas[0]);
+                    case 2:
+                    case 3:
+                    case 4:
+                    case 5:
+                    case 6:
+                    case 7:
+                    case 8:
+                        x = location.getX();
+                        y = location.getY();
+                        return Common.findFirst(areas, area -> area.contains(x, y));
+                    default:
+                        QuadMap<PlotArea> search = this.plotAreaGrid.get(location.getWorld());
+                        return Optional.of(search.get(location.getX(), location.getZ()));
+                }
+            }
+        }
+    }
+
     /**
      * Get the relevant plot area for a specified location.
      * <ul>
@@ -445,90 +456,46 @@ public class PS {
      * </ul>
      * Note: An applicable plot area may not include the location i.e. clusters
      * @param location the location
-     * @return
      */
+    @Deprecated
     public PlotArea getApplicablePlotArea(Location location) {
-        switch (this.plotAreas.length) {
-            case 0:
-                return null;
-            case 1:
-                return this.plotAreas[0];
-            case 2:
-            case 3:
-            case 4:
-            case 5:
-            case 6:
-            case 7:
-            case 8:
-                String world = location.getWorld();
-                int hash = world.hashCode();
-                for (PlotArea area : this.plotAreas) {
-                    if (hash == area.worldhash) {
-                        if (area.contains(location.getX(), location.getZ()) && (!this.plotAreaHasCollision || world.equals(area.worldname))) {
-                            return area;
-                        }
-                    }
-                }
-                return null;
-            default:
-                PlotArea[] areas = this.plotAreaMap.get(location.getWorld());
-                if (areas == null) {
-                    return null;
-                }
-                int y;
-                int x;
-                switch (areas.length) {
-                    case 1:
-                        return areas[0];
-                    case 2:
-                    case 3:
-                    case 4:
-                    case 5:
-                    case 6:
-                    case 7:
-                    case 8:
-                        x = location.getX();
-                        y = location.getY();
-                        for (PlotArea area : areas) {
-                            if (area.contains(x, y)) {
-                                return area;
-                            }
-                        }
-                        return null;
-                    default:
-                        QuadMap<PlotArea> search = this.plotAreaGrid.get(location.getWorld());
-                        return search.get(location.getX(), location.getZ());
-                }
-        }
+        Optional<PlotArea> area = findApplicablePlotARea(location);
+        return area.isPresent() ? area.get() : null;
     }
 
+    @Deprecated
     public PlotArea getPlotArea(String world, String id) {
-        PlotArea[] areas = this.plotAreaMap.get(world);
-        if (areas == null) {
-            return null;
-        }
-        if (areas.length == 1) {
-            return areas[0];
-        } else if (id == null) {
-            return null;
-        }
-        for (PlotArea area : areas) {
-            if (StringMan.isEqual(id, area.id)) {
-                return area;
-            }
+        Optional<PlotArea> area = findPlotArea(world, id);
+        if (area.isPresent()) {
+            return area.get();
         }
         return null;
     }
 
-    public PlotArea getPlotAreaAbs(String world, String id) {
+    public Optional<PlotArea> findPlotArea(String world, String id) {
+        PlotArea[] areas = this.plotAreaMap.get(world);
+        if (areas == null || id == null) {
+            return Optional.empty();
+        }
+        if (areas.length == 1) {
+            return Optional.of(areas[0]);
+        }
+        return Common.findFirst(areas, area -> StringMan.isEqual(id, area.id));
+    }
+
+    public Optional<PlotArea> findPlotAreaAbs(String world, String id) {
         PlotArea[] areas = this.plotAreaMap.get(world);
         if (areas == null) {
-            return null;
+            return Optional.empty();
         }
-        for (PlotArea area : areas) {
-            if (StringMan.isEqual(id, area.id)) {
-                return area;
-            }
+        return Common.findFirst(areas, area -> StringMan.isEqual(id, area.id));
+    }
+
+    @Deprecated
+    public PlotArea getPlotAreaAbs(String world, String id) {
+        Optional<PlotArea> area = findPlotAreaAbs(world, id);
+        if (area.isPresent()) {
+            return area.get();
         }
         return null;
     }
@@ -959,12 +926,7 @@ public class PS {
         } else {
             list = new ArrayList<>(input);
         }
-        Collections.sort(list, new Comparator<Plot>() {
-            @Override
-            public int compare(Plot a, Plot b) {
-                return Long.compare(ExpireManager.IMP.getTimestamp(a.owner), ExpireManager.IMP.getTimestamp(b.owner));
-            }
-        });
+        Collections.sort(list, (a, b) -> Long.compare(ExpireManager.IMP.getTimestamp(a.owner), ExpireManager.IMP.getTimestamp(b.owner)));
         return list;
     }
 
@@ -1150,15 +1112,8 @@ public class PS {
      * @return Set of plot
      */
     public Set<Plot> getPlots(String world, UUID uuid) {
-        ArrayList<Plot> myPlots = new ArrayList<>();
-        for (Plot plot : getPlots(world)) {
-            if (plot.hasOwner()) {
-                if (plot.isOwnerAbs(uuid)) {
-                    myPlots.add(plot);
-                }
-            }
-        }
-        return new HashSet<>(myPlots);
+        return new HashSet<>(getPlots(world).stream().filter(Plot::hasOwner)
+                .filter(plot -> plot.isOwnerAbs(uuid)).collect(Collectors.toCollection(ArrayList::new)));
     }
 
     /**
@@ -1168,15 +1123,9 @@ public class PS {
      * @return Set of plot
      */
     public Set<Plot> getPlots(PlotArea area, UUID uuid) {
-        ArrayList<Plot> myplots = new ArrayList<>();
-        for (Plot plot : getPlots(area)) {
-            if (plot.hasOwner()) {
-                if (plot.isOwnerAbs(uuid)) {
-                    myplots.add(plot);
-                }
-            }
-        }
-        return new HashSet<>(myplots);
+        return new HashSet<>(getPlots().stream().filter(Plot::hasOwner)
+                .filter(plot -> plot.isOwnerAbs(uuid))
+                .collect(Collectors.toCollection(ArrayList::new)));
     }
 
     /**
@@ -1967,41 +1916,26 @@ public class PS {
     }
 
     public void foreachPlotArea(RunnableVal<PlotArea> runnable) {
-        for (PlotArea area : this.plotAreas) {
-            runnable.run(area);
-        }
+        Common.arrayForEach(this.plotAreas, runnable);
     }
 
     public void foreachPlotArea(String world, RunnableVal<PlotArea> runnable) {
         PlotArea[] array = this.plotAreaMap.get(world);
-        if (array == null) {
-            return;
-        }
-        for (PlotArea area : array) {
-            runnable.run(area);
-        }
+        Common.arrayForEach(array, runnable);
     }
 
     public void foreachPlot(RunnableVal<Plot> runnable) {
         for (PlotArea area : this.plotAreas) {
-            for (Plot plot : area.getPlots()) {
-                runnable.run(plot);
-            }
+            area.getPlots().forEach(runnable::run);
         }
     }
 
-    public void foreachPlotRaw(RunnableVal<Plot> runnable) {
-        for (PlotArea area : this.plotAreas) {
-            for (Plot plot : area.getPlots()) {
-                runnable.run(plot);
-            }
+    public void foreachPlotRaw(final RunnableVal<Plot> runnable) {
+        for (final PlotArea area : this.plotAreas) {
+            area.getPlots().forEach(runnable::run);
         }
         if (this.plots_tmp != null) {
-            for (HashMap<PlotId, Plot> entry : this.plots_tmp.values()) {
-                for (Plot entry2 : entry.values()) {
-                    runnable.run(entry2);
-                }
-            }
+            this.plots_tmp.values().forEach(map -> map.values().forEach(runnable::run));
         }
     }
 
@@ -2044,13 +1978,7 @@ public class PS {
 
     public boolean isAugmented(String world) {
         PlotArea[] areas = this.plotAreaMap.get(world);
-        if (areas == null) {
-            return false;
-        }
-        if (areas.length > 1) {
-            return true;
-        }
-        return areas[0].TYPE != 0;
+        return areas != null && (areas.length > 1 || areas[0].TYPE != 0);
     }
 
     /**
