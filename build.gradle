@@ -15,10 +15,10 @@ buildscript {
 group = 'com.intellectualcrafters'
 
 ext {
-    git = Grgit.open()
-    revision = "${git.head().abbreviatedId}"
+    //git = Grgit.open()
+    //revision = "${git.head().abbreviatedId}"
 }
-version = "3.4.6-SNAPSHOT-${revision}"
+version = "3.4.5-SNAPSHOT-Storm"
 description = """PlotSquared"""
 
 subprojects {
