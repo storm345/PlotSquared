@@ -168,10 +168,10 @@ public class HybridPlotManager extends ClassicPlotManager {
             @Override
             public void run(int[] value) {
                 // If the chunk isn't near the edge and it isn't an augmented world we can just regen the whole chunk
-                if (canRegen && (value[6] == 0)) {
+            	/*if (canRegen && (value[6] == 0)) {
                     queue.regenChunk(value[0], value[1]);
                     return;
-                }
+                }*/
                 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                 // Otherwise we need to set each component, as we don't want to regenerate the road or other plots that share the same chunk //
                 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
